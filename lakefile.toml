@@ -1,0 +1,24 @@
+name = "LeanBPETokenizer"
+version = "0.1.0"
+keywords = ["math"]
+defaultTargets = ["LeanBPETokenizer"]
+
+[leanOptions]
+pp.unicode.fun = true # pretty-prints `fun a ↦ b`
+relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+maxSynthPendingDepth = 3
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.27.0"
+
+[[require]]
+name = "Regex"
+git = "https://github.com/pandaman64/lean-regex"
+rev = "v4.27.1-rc1"
+subDir = "regex"
+
+[[lean_lib]]
+name = "LeanBPETokenizer"
