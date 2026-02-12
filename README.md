@@ -1,6 +1,6 @@
 # LeanBPETokenizer
 
-# Installation and Build
+## Installation and Build
 
 1. Update the build system Lake:
 ```bash
