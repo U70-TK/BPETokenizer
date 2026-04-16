@@ -55,7 +55,8 @@ namespace BPE
 
 6. (Lemma 7) `text_bytes.decode = s`.
 -/
-theorem ascii_bpe_roundtrip
+theorem ascii_bpe_roundtrip_withProfile
+    (profile        : PreTokenizerProfile)
     (merges         : MergeMap)
     (vocab          : VocabMap)
     (byteShuffle    : ByteShuffle)
@@ -64,8 +65,9 @@ theorem ascii_bpe_roundtrip
     (hinv           : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
     (s              : String)
     (hascii         : ∀ c ∈ s.toList, c.val < 128) :
-    decode vocab inverseShuffle (encode merges vocab byteShuffle s) = s := by
+    decode vocab inverseShuffle (encodeWithProfile profile merges vocab byteShuffle s) = s := by
   simp only [decode, encode, decodeChunk]
+  simp only [encodeWithProfile]
   -- List foldl with arbitrary init
   have list_foldl_acc : ∀ (l : List ByteArray) (init : ByteArray),
       l.foldl (· ++ ·) init = init ++ l.foldl (· ++ ·) ByteArray.empty := by
@@ -103,18 +105,33 @@ theorem ascii_bpe_roundtrip
         rw [list_foldl_acc cs c]
   rw [dc_flatmap]
   -- Chunks join back to s.toUTF8 (Lemma 4)
-  have h_part : (preTokenizeASCII s.toUTF8).toList.foldl (· ++ ·) ByteArray.empty = s.toUTF8 := by
+  have h_part :
+      (preTokenizeASCII profile s.toUTF8).toList.foldl (· ++ ·) ByteArray.empty = s.toUTF8 := by
     rw [Array.foldl_toList]
-    exact preTokenize_partition s.toUTF8
+    exact preTokenize_partition profile s.toUTF8
   rw [h_part]
   -- UTF-8 roundtrip (Lemma 7)
   exact lemma7_ascii_utf8_roundtrip s hascii
+
+theorem ascii_bpe_roundtrip
+    (merges         : MergeMap)
+    (vocab          : VocabMap)
+    (byteShuffle    : ByteShuffle)
+    (inverseShuffle : ByteShuffle)
+    (hw             : WellFormed merges vocab byteShuffle)
+    (hinv           : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
+    (s              : String)
+    (hascii         : ∀ c ∈ s.toList, c.val < 128) :
+    decode vocab inverseShuffle (encode merges vocab byteShuffle s) = s :=
+  ascii_bpe_roundtrip_withProfile
+    .cl100k merges vocab byteShuffle inverseShuffle hw hinv s hascii
 
 /--
 Operational roundtrip theorem: the proof only needs the `EncodeReady` subset
 of the full `WellFormed` structure.
 -/
-theorem ascii_bpe_roundtrip_of_encodeReady
+theorem ascii_bpe_roundtrip_of_encodeReady_withProfile
+    (profile : PreTokenizerProfile)
     (merges : MergeMap)
     (vocab : VocabMap)
     (byteShuffle inverseShuffle : ByteShuffle)
@@ -122,8 +139,9 @@ theorem ascii_bpe_roundtrip_of_encodeReady
     (hinv : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
     (s : String)
     (hascii : ∀ c ∈ s.toList, c.val < 128) :
-    decode vocab inverseShuffle (encode merges vocab byteShuffle s) = s := by
+    decode vocab inverseShuffle (encodeWithProfile profile merges vocab byteShuffle s) = s := by
   simp only [decode, encode, decodeChunk]
+  simp only [encodeWithProfile]
   have list_foldl_acc : ∀ (l : List ByteArray) (init : ByteArray),
       l.foldl (· ++ ·) init = init ++ l.foldl (· ++ ·) ByteArray.empty := by
     intro l; induction l with
@@ -157,17 +175,45 @@ theorem ascii_bpe_roundtrip_of_encodeReady
         simp only [List.foldl_cons, ByteArray.empty_append]
         rw [list_foldl_acc cs c]
   rw [dc_flatmap]
-  have h_part : (preTokenizeASCII s.toUTF8).toList.foldl (· ++ ·) ByteArray.empty = s.toUTF8 := by
+  have h_part :
+      (preTokenizeASCII profile s.toUTF8).toList.foldl (· ++ ·) ByteArray.empty = s.toUTF8 := by
     rw [Array.foldl_toList]
-    exact preTokenize_partition s.toUTF8
+    exact preTokenize_partition profile s.toUTF8
   rw [h_part]
   exact lemma7_ascii_utf8_roundtrip s hascii
+
+theorem ascii_bpe_roundtrip_of_encodeReady
+    (merges : MergeMap)
+    (vocab : VocabMap)
+    (byteShuffle inverseShuffle : ByteShuffle)
+    (hw : EncodeReady merges vocab)
+    (hinv : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
+    (s : String)
+    (hascii : ∀ c ∈ s.toList, c.val < 128) :
+    decode vocab inverseShuffle (encode merges vocab byteShuffle s) = s :=
+  ascii_bpe_roundtrip_of_encodeReady_withProfile
+    .cl100k merges vocab byteShuffle inverseShuffle hw hinv s hascii
 
 /--
 Construction-facing roundtrip theorem: validity handles the base-token part,
 and callers can supply the remaining merge-decomposition proof for the built
 merge map.
 -/
+theorem ascii_bpe_roundtrip_of_valid_withProfile
+    (profile : PreTokenizerProfile)
+    (mergeList : List MergeEntry)
+    (hvalid : ValidMergeList mergeList)
+    (byteShuffle inverseShuffle : ByteShuffle)
+    (hinv : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
+    (s : String)
+    (hascii : ∀ c ∈ s.toList, c.val < 128) :
+    decode (buildVocab mergeList) inverseShuffle
+      (encodeWithProfile profile (buildMerges mergeList) (buildVocab mergeList) byteShuffle s) = s :=
+  ascii_bpe_roundtrip_of_encodeReady_withProfile
+    profile
+    (buildMerges mergeList) (buildVocab mergeList) byteShuffle inverseShuffle
+    (buildEncodeReady mergeList hvalid) hinv s hascii
+
 theorem ascii_bpe_roundtrip_of_valid
     (mergeList : List MergeEntry)
     (hvalid : ValidMergeList mergeList)
@@ -177,8 +223,7 @@ theorem ascii_bpe_roundtrip_of_valid
     (hascii : ∀ c ∈ s.toList, c.val < 128) :
     decode (buildVocab mergeList) inverseShuffle
       (encode (buildMerges mergeList) (buildVocab mergeList) byteShuffle s) = s :=
-  ascii_bpe_roundtrip_of_encodeReady
-    (buildMerges mergeList) (buildVocab mergeList) byteShuffle inverseShuffle
-    (buildEncodeReady mergeList hvalid) hinv s hascii
+  ascii_bpe_roundtrip_of_valid_withProfile
+    .cl100k mergeList hvalid byteShuffle inverseShuffle hinv s hascii
 
 end BPE

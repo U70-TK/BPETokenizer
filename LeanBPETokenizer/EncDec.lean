@@ -106,14 +106,23 @@ Full encoding of an ASCII string to a list of token ids.
 2. Pre-tokenize using `preTokenizeASCII` (Lemma 4: partition).
 3. Encode each chunk with `encodeChunk` (Lemma 1 per chunk).
 -/
-def encode
+def encodeWithProfile
+    (profile : PreTokenizerProfile)
     (merges      : MergeMap)
     (vocab       : VocabMap)
     (byteShuffle : ByteShuffle)
     (text        : String) : List TokenId :=
   let textBytes := text.toUTF8
-  let chunks    := preTokenizeASCII textBytes
+  let chunks    := preTokenizeASCII profile textBytes
   chunks.toList.flatMap (fun chunk => encodeChunk merges vocab byteShuffle chunk)
+
+/-- `cl100k`-style encoding retained as the default convenience wrapper. -/
+def encode
+    (merges      : MergeMap)
+    (vocab       : VocabMap)
+    (byteShuffle : ByteShuffle)
+    (text        : String) : List TokenId :=
+  encodeWithProfile .cl100k merges vocab byteShuffle text
 
 -- ---------------------------------------------------------------------------
 -- decode (full string)
@@ -270,6 +279,49 @@ private lemma encodeChunkLoop_decode_inv
               rfl
             exact hw.merge_decomp p0 p1 idx hgetD hcont
 
+/-- `encodeChunkLoop` preserves any predicate that holds on the initial ids and
+all merge targets. -/
+private lemma encodeChunkLoop_preserves
+    (merges : MergeMap)
+    (P : TokenId → Prop)
+    (hmerge : ∀ p0 p1 idx, merges.get? (p0, p1) = some idx → P idx)
+    (fuel : Nat)
+    (ids : List TokenId)
+    (hids : ∀ id ∈ ids, P id) :
+    ∀ id ∈ encodeChunkLoop merges fuel ids, P id := by
+  induction fuel generalizing ids with
+  | zero =>
+      intro id hid
+      simpa [encodeChunkLoop] using hids id hid
+  | succ fuel ih =>
+      simp only [encodeChunkLoop]
+      split_ifs with hlt
+      · intro id hid
+        exact hids id hid
+      · set cands := (getStats ids).toList.filterMap (fun kv =>
+            match merges.get? kv.1 with
+            | none => none
+            | some i => some (kv.1.1, kv.1.2, i)) with h_cands
+        rcases hcands : cands with _ | ⟨head, rest⟩
+        · intro id hid
+          simpa [hcands] using hids id hid
+        · simp only [hcands]
+          split
+          · intro id hid
+            exact hids id hid
+          · rename_i p0 p1 idx h_best
+            have hmem : (p0, p1, idx) ∈ head :: rest := by
+              rcases foldl_best_mem_candidates (head :: rest) none p0 p1 idx h_best with h | h
+              · exact h
+              · simp at h
+            have hget : merges.get? (p0, p1) = some idx := by
+              apply filterMap_mem_merges merges (getStats ids) p0 p1 idx
+              rw [h_cands.symm.trans hcands]
+              exact hmem
+            have hmergedIds : ∀ id ∈ bpeMerge ids (p0, p1) idx, P id :=
+              bpeMerge_preserves P ids (p0, p1) idx (hmerge p0 p1 idx hget) hids
+            exact ih (bpeMerge ids (p0, p1) idx) hmergedIds
+
 /-- The initial single-byte id list decodes to the shuffled byte array. -/
 private lemma ids0_decode_eq (vocab : VocabMap)
     (hbase : ∀ i : UInt8, vocab.getD i.toNat ByteArray.empty = ByteArray.mk #[i])
@@ -323,6 +375,58 @@ theorem chunkRoundtrip
   show ByteArray.mk ((chunk.data.map byteShuffle).map inverseShuffle) = chunk
   rw [Array.map_map]
   exact shuffle_cancel_array byteShuffle inverseShuffle hinv chunk
+
+/-- Encoding a chunk preserves any token-id predicate that holds on shuffled
+base-byte ids and every merge target. -/
+theorem encodeChunk_preserves
+    (merges : MergeMap)
+    (vocab : VocabMap)
+    (byteShuffle : ByteShuffle)
+    (chunk : ByteArray)
+    (P : TokenId → Prop)
+    (hbase : ∀ b : UInt8, P b.toNat)
+    (hmerge : ∀ p0 p1 idx, merges.get? (p0, p1) = some idx → P idx) :
+    ∀ id ∈ encodeChunk merges vocab byteShuffle chunk, P id := by
+  simp only [encodeChunk]
+  set shuffled := ByteArray.mk (chunk.data.map byteShuffle)
+  set ids₀ : List TokenId := shuffled.data.toList.map (·.toNat) with h_ids₀
+  have hids₀ : ∀ id ∈ ids₀, P id := by
+    intro id hid
+    rw [h_ids₀] at hid
+    rw [List.mem_map] at hid
+    rcases hid with ⟨b, hb, rfl⟩
+    exact hbase b
+  exact encodeChunkLoop_preserves merges P hmerge ids₀.length ids₀ hids₀
+
+/-- Full-string encoding preserves any token-id predicate that holds on
+shuffled base-byte ids and every merge target. -/
+theorem encodeWithProfile_preserves
+    (profile : PreTokenizerProfile)
+    (merges : MergeMap)
+    (vocab : VocabMap)
+    (byteShuffle : ByteShuffle)
+    (text : String)
+    (P : TokenId → Prop)
+    (hbase : ∀ b : UInt8, P b.toNat)
+    (hmerge : ∀ p0 p1 idx, merges.get? (p0, p1) = some idx → P idx) :
+    ∀ id ∈ encodeWithProfile profile merges vocab byteShuffle text, P id := by
+  intro id hid
+  simp only [encodeWithProfile] at hid
+  rw [List.mem_flatMap] at hid
+  rcases hid with ⟨chunk, hchunk, hidChunk⟩
+  exact encodeChunk_preserves merges vocab byteShuffle chunk P hbase hmerge id hidChunk
+
+/-- Default `cl100k` wrapper for the preservation theorem. -/
+theorem encode_preserves
+    (merges : MergeMap)
+    (vocab : VocabMap)
+    (byteShuffle : ByteShuffle)
+    (text : String)
+    (P : TokenId → Prop)
+    (hbase : ∀ b : UInt8, P b.toNat)
+    (hmerge : ∀ p0 p1 idx, merges.get? (p0, p1) = some idx → P idx) :
+    ∀ id ∈ encode merges vocab byteShuffle text, P id :=
+  encodeWithProfile_preserves .cl100k merges vocab byteShuffle text P hbase hmerge
 
 /-- Convenience wrapper from the stronger `WellFormed` hypothesis. -/
 theorem chunkRoundtrip_of_wellFormed

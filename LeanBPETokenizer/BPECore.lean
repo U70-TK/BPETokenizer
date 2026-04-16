@@ -124,6 +124,85 @@ def bpeMerge (ids : List TokenId) (pair : TokenId × TokenId) (idx : TokenId) :
     List TokenId :=
   bpeMergeAux pair idx ids []
 
+/-- `bpeMergeAux` preserves any predicate that already holds on the input ids
+and the accumulator, provided it also holds on the merged id. -/
+private lemma bpeMergeAux_preserves
+    (P : TokenId → Prop)
+    (pair : TokenId × TokenId)
+    (idx : TokenId)
+    (hidx : P idx) :
+    ∀ (xs acc : List TokenId),
+      (∀ id ∈ xs, P id) →
+      (∀ id ∈ acc, P id) →
+      ∀ id ∈ bpeMergeAux pair idx xs acc, P id := by
+  suffices h :
+      ∀ n (xs acc : List TokenId),
+        xs.length ≤ n →
+        (∀ id ∈ xs, P id) →
+        (∀ id ∈ acc, P id) →
+        ∀ id ∈ bpeMergeAux pair idx xs acc, P id by
+    intro xs acc hxs hacc id hid
+    exact h xs.length xs acc le_rfl hxs hacc id hid
+  intro n
+  induction n with
+  | zero =>
+      intro xs acc hlen hxs hacc x hx
+      match xs with
+      | [] =>
+          simp [bpeMergeAux] at hx
+          exact hacc x hx
+      | [_] => simp at hlen
+      | _ :: _ :: _ => simp at hlen
+  | succ n ih =>
+      intro xs acc hlen hxs hacc x hx
+      match xs with
+      | [] =>
+          simp [bpeMergeAux] at hx
+          exact hacc x hx
+      | [a] =>
+          simp [bpeMergeAux] at hx
+          rcases hx with hxAcc | rfl
+          · exact hacc x hxAcc
+          · exact hxs x (by simp)
+      | a :: b :: rest =>
+          simp only [bpeMergeAux] at hx
+          by_cases hpair : a == pair.1 && b == pair.2
+          · have hlen' : rest.length ≤ n := by simp at hlen; omega
+            have hrest : ∀ id ∈ rest, P id := by
+              intro id hidRest
+              exact hxs id (by simp [hidRest])
+            have hacc' : ∀ id ∈ idx :: acc, P id := by
+              intro id hidAcc
+              simp at hidAcc
+              rcases hidAcc with rfl | hidAcc
+              · exact hidx
+              · exact hacc id hidAcc
+            exact ih rest (idx :: acc) hlen' hrest hacc' x (by simpa [hpair] using hx)
+          · have hlen' : (b :: rest).length ≤ n := by simp at hlen ⊢; omega
+            have htail : ∀ id ∈ b :: rest, P id := by
+              intro id hidTail
+              exact hxs id (by simp [hidTail])
+            have hacc' : ∀ id ∈ a :: acc, P id := by
+              intro id' hidAcc
+              simp at hidAcc
+              rcases hidAcc with rfl | hidAcc
+              · exact hxs id' (by simp)
+              · exact hacc id' hidAcc
+            exact ih (b :: rest) (a :: acc) hlen' htail hacc' x (by simpa [hpair] using hx)
+
+/-- `bpeMerge` preserves any predicate that already holds on the input ids and
+the new merged id. -/
+theorem bpeMerge_preserves
+    (P : TokenId → Prop)
+    (ids : List TokenId)
+    (pair : TokenId × TokenId)
+    (idx : TokenId)
+    (hidx : P idx)
+    (hids : ∀ id ∈ ids, P id) :
+    ∀ x ∈ bpeMerge ids pair idx, P x := by
+  intro x hx
+  exact bpeMergeAux_preserves P pair idx hidx ids [] hids (by simp) x (by simpa [bpeMerge] using hx)
+
 -- ---------------------------------------------------------------------------
 -- decodeBytes
 -- ---------------------------------------------------------------------------

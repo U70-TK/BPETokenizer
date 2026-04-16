@@ -25,12 +25,12 @@ def printUsage : IO Unit := do
   IO.println "  lean-bpe roundtrip <text>"
 
 def main (args : List String) : IO UInt32 := do
-  let result ← loadAsciiTokenizer
+  let result ← loadVerifiedAsciiTokenizer
   match result with
   | .error err =>
       IO.eprintln s!"failed to load tokenizer: {err}"
       return 1
-  | .ok tok =>
+  | .ok ⟨tok, _⟩ =>
       match args with
       | ["encode", text] =>
           match encodeExternalIds tok text with
