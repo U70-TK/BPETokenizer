@@ -6,3 +6,4 @@ import LeanBPETokenizer.WellFormed
 import LeanBPETokenizer.Decompose
 import LeanBPETokenizer.EncDec
 import LeanBPETokenizer.RoundTrip
+import LeanBPETokenizer.TokenizerJson

@@ -97,7 +97,7 @@ theorem ascii_bpe_roundtrip
         simp only [List.flatMap_cons]
         rw [dc_append, ih]
         have hcr : ByteArray.mk ((decodeBytes vocab (encodeChunk merges vocab byteShuffle c)).data.map inverseShuffle) = c :=
-          chunkRoundtrip merges vocab byteShuffle inverseShuffle c hw hinv
+          chunkRoundtrip merges vocab byteShuffle inverseShuffle c hw.toEncodeReady hinv
         rw [hcr]
         simp only [List.foldl_cons, ByteArray.empty_append]
         rw [list_foldl_acc cs c]
@@ -109,5 +109,76 @@ theorem ascii_bpe_roundtrip
   rw [h_part]
   -- UTF-8 roundtrip (Lemma 7)
   exact lemma7_ascii_utf8_roundtrip s hascii
+
+/--
+Operational roundtrip theorem: the proof only needs the `EncodeReady` subset
+of the full `WellFormed` structure.
+-/
+theorem ascii_bpe_roundtrip_of_encodeReady
+    (merges : MergeMap)
+    (vocab : VocabMap)
+    (byteShuffle inverseShuffle : ByteShuffle)
+    (hw : EncodeReady merges vocab)
+    (hinv : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
+    (s : String)
+    (hascii : ∀ c ∈ s.toList, c.val < 128) :
+    decode vocab inverseShuffle (encode merges vocab byteShuffle s) = s := by
+  simp only [decode, encode, decodeChunk]
+  have list_foldl_acc : ∀ (l : List ByteArray) (init : ByteArray),
+      l.foldl (· ++ ·) init = init ++ l.foldl (· ++ ·) ByteArray.empty := by
+    intro l; induction l with
+    | nil => intro init; simp
+    | cons h t ih =>
+        intro init
+        simp only [List.foldl_cons, ByteArray.empty_append]
+        rw [ih (init ++ h), ih h, ByteArray.append_assoc]
+  have dc_append : ∀ ids1 ids2 : List TokenId,
+      ByteArray.mk ((decodeBytes vocab (ids1 ++ ids2)).data.map inverseShuffle) =
+      ByteArray.mk ((decodeBytes vocab ids1).data.map inverseShuffle) ++
+      ByteArray.mk ((decodeBytes vocab ids2).data.map inverseShuffle) := by
+    intro ids1 ids2
+    rw [decodeBytes_append]
+    apply ByteArray.ext_iff.mpr
+    simp [ByteArray.data_append, Array.map_append]
+  have dc_flatmap : ∀ (l : List ByteArray),
+      ByteArray.mk ((decodeBytes vocab (l.flatMap (encodeChunk merges vocab byteShuffle))).data.map inverseShuffle) =
+      l.foldl (· ++ ·) ByteArray.empty := by
+    intro l
+    induction l with
+    | nil => simp only [List.flatMap_nil, List.foldl_nil, decodeBytes_nil,
+                        show (ByteArray.empty : ByteArray).data = #[] from rfl, Array.map_empty,
+                        show ByteArray.mk #[] = ByteArray.empty from rfl]
+    | cons c cs ih =>
+        simp only [List.flatMap_cons]
+        rw [dc_append, ih]
+        have hcr : ByteArray.mk ((decodeBytes vocab (encodeChunk merges vocab byteShuffle c)).data.map inverseShuffle) = c :=
+          chunkRoundtrip merges vocab byteShuffle inverseShuffle c hw hinv
+        rw [hcr]
+        simp only [List.foldl_cons, ByteArray.empty_append]
+        rw [list_foldl_acc cs c]
+  rw [dc_flatmap]
+  have h_part : (preTokenizeASCII s.toUTF8).toList.foldl (· ++ ·) ByteArray.empty = s.toUTF8 := by
+    rw [Array.foldl_toList]
+    exact preTokenize_partition s.toUTF8
+  rw [h_part]
+  exact lemma7_ascii_utf8_roundtrip s hascii
+
+/--
+Construction-facing roundtrip theorem: validity handles the base-token part,
+and callers can supply the remaining merge-decomposition proof for the built
+merge map.
+-/
+theorem ascii_bpe_roundtrip_of_valid
+    (mergeList : List MergeEntry)
+    (hvalid : ValidMergeList mergeList)
+    (byteShuffle inverseShuffle : ByteShuffle)
+    (hinv : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
+    (s : String)
+    (hascii : ∀ c ∈ s.toList, c.val < 128) :
+    decode (buildVocab mergeList) inverseShuffle
+      (encode (buildMerges mergeList) (buildVocab mergeList) byteShuffle s) = s :=
+  ascii_bpe_roundtrip_of_encodeReady
+    (buildMerges mergeList) (buildVocab mergeList) byteShuffle inverseShuffle
+    (buildEncodeReady mergeList hvalid) hinv s hascii
 
 end BPE

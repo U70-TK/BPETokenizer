@@ -220,7 +220,7 @@ private lemma filterMap_mem_merges
 /-- `encodeChunkLoop` preserves `decodeBytes` under `WellFormed`. -/
 private lemma encodeChunkLoop_decode_inv
     (merges : MergeMap) (vocab : VocabMap) (byteShuffle : ByteShuffle)
-    (hw : WellFormed merges vocab byteShuffle)
+    (hw : EncodeReady merges vocab)
     (fuel : Nat) (ids : List TokenId) :
     decodeBytes vocab (encodeChunkLoop merges fuel ids) = decodeBytes vocab ids := by
   induction fuel generalizing ids with
@@ -307,7 +307,7 @@ theorem chunkRoundtrip
     (vocab       : VocabMap)
     (byteShuffle inverseShuffle : ByteShuffle)
     (chunk       : ByteArray)
-    (hw          : WellFormed merges vocab byteShuffle)
+    (hw          : EncodeReady merges vocab)
     (hinv        : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b) :
     decodeChunk vocab inverseShuffle
       (encodeChunk merges vocab byteShuffle chunk) = chunk := by
@@ -323,5 +323,17 @@ theorem chunkRoundtrip
   show ByteArray.mk ((chunk.data.map byteShuffle).map inverseShuffle) = chunk
   rw [Array.map_map]
   exact shuffle_cancel_array byteShuffle inverseShuffle hinv chunk
+
+/-- Convenience wrapper from the stronger `WellFormed` hypothesis. -/
+theorem chunkRoundtrip_of_wellFormed
+    (merges : MergeMap)
+    (vocab : VocabMap)
+    (byteShuffle inverseShuffle : ByteShuffle)
+    (chunk : ByteArray)
+    (hw : WellFormed merges vocab byteShuffle)
+    (hinv : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b) :
+    decodeChunk vocab inverseShuffle
+      (encodeChunk merges vocab byteShuffle chunk) = chunk :=
+  chunkRoundtrip merges vocab byteShuffle inverseShuffle chunk hw.toEncodeReady hinv
 
 end BPE
