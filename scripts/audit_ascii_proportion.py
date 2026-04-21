@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import json
 import sys
 from dataclasses import dataclass
@@ -88,13 +89,22 @@ def audit_text(path: Path) -> Stats:
     return stats
 
 
+def audit_delimited(path: Path, delimiter: str) -> Stats:
+    stats = Stats()
+    with path.open(newline="") as f:
+        reader = csv.DictReader(f, delimiter=delimiter)
+        for row in reader:
+            stats.add_example(row_has_non_ascii(row))
+    return stats
+
+
 def audit_parquet(path: Path) -> Stats:
     stats = Stats()
     parquet = pq.ParquetFile(path)
     for batch in parquet.iter_batches():
-      rows = batch.to_pylist()
-      for row in rows:
-          stats.add_example(row_has_non_ascii(row))
+        rows = batch.to_pylist()
+        for row in rows:
+            stats.add_example(row_has_non_ascii(row))
     return stats
 
 
@@ -108,9 +118,26 @@ def audit_file(path: Path) -> Stats:
         return audit_jsonl(path)
     if path.suffix == ".json":
         return audit_json(path)
-    if path.suffix in {".txt", ".md", ".csv"}:
+    if path.suffix == ".csv":
+        return audit_delimited(path, ",")
+    if path.suffix == ".tsv":
+        return audit_delimited(path, "\t")
+    if path.suffix in {".txt", ".md"}:
         return audit_text(path)
     return Stats()
+
+
+def collect_dataset_dirs(root: Path) -> list[Path]:
+    nested = [
+        dataset_dir
+        for owner_dir in sorted(root.iterdir())
+        if owner_dir.is_dir()
+        for dataset_dir in sorted(owner_dir.iterdir())
+        if dataset_dir.is_dir()
+    ]
+    if nested:
+        return nested
+    return [path for path in sorted(root.iterdir()) if path.is_dir()]
 
 
 def main() -> int:
@@ -120,7 +147,7 @@ def main() -> int:
         return 2
 
     overall = Stats()
-    dataset_dirs = sorted(path for path in root.iterdir() if path.is_dir())
+    dataset_dirs = collect_dataset_dirs(root)
     for dataset_dir in dataset_dirs:
         stats = Stats()
         for path in sorted(dataset_dir.rglob("*")):
@@ -130,7 +157,7 @@ def main() -> int:
         print(
             json.dumps(
                 {
-                    "dataset": dataset_dir.name,
+                    "dataset": dataset_dir.relative_to(root).as_posix(),
                     "examples": stats.examples,
                     "non_ascii_examples": stats.non_ascii_examples,
                     "proportion_non_ascii": stats.proportion,

@@ -157,6 +157,18 @@ def StudySummary.empty : StudySummary :=
     pythonTokenTotal := 0
     encodeNanosTotal := 0 }
 
+/-- Summary of a pure tokenization-speed benchmark. -/
+structure BenchmarkSummary where
+  sampleCount : Nat
+  tokenTotal : Nat
+  encodeNanosTotal : Nat
+  deriving Repr
+
+def BenchmarkSummary.empty : BenchmarkSummary :=
+  { sampleCount := 0
+    tokenTotal := 0
+    encodeNanosTotal := 0 }
+
 private def appendFailure
     (failures : List String)
     (path : System.FilePath)
@@ -366,6 +378,49 @@ def renderStudySummary (summary : StudySummary) : List String :=
   , s!"tokens_per_sec: {formatTokensPerSec summary.leanTokenTotal summary.encodeNanosTotal}"
   ]
 
+private partial def benchmarkSamplesLoop
+    (path : System.FilePath)
+    (tok : LoadedAsciiTokenizer)
+    (samples : List String)
+    (summary : BenchmarkSummary)
+    (failures : List String) : IO (BenchmarkSummary × List String) := do
+  match samples with
+  | [] => pure (summary, failures)
+  | sample :: samples' =>
+      let encoded := encodeExternalIds tok sample
+      match encoded with
+      | .error err =>
+          benchmarkSamplesLoop path tok samples'
+            { summary with
+                sampleCount := summary.sampleCount + 1 }
+            (appendFailure failures path
+              s!"Lean encode failed for {repr sample}: {err}")
+      | .ok ids =>
+          benchmarkSamplesLoop path tok samples'
+            { summary with
+                sampleCount := summary.sampleCount + 1
+                tokenTotal := summary.tokenTotal + ids.length }
+            failures
+
+/-- Benchmark one loaded tokenizer on a corpus without Python cross-checking. -/
+def benchmarkTokenizer
+    (path : System.FilePath)
+    (tok : LoadedAsciiTokenizer)
+    (samples : List String) : IO (BenchmarkSummary × List String) := do
+  let failures0 := checkExpectedProfile path tok []
+  let failures1 := checkAsciiRejection path tok failures0
+  let startNs ← IO.monoNanosNow
+  let (summary, failures) ← benchmarkSamplesLoop path tok samples BenchmarkSummary.empty failures1
+  let stopNs ← IO.monoNanosNow
+  pure ({ summary with encodeNanosTotal := stopNs - startNs }, failures)
+
+def renderBenchmarkSummary (summary : BenchmarkSummary) : List String :=
+  [ s!"samples: {summary.sampleCount}"
+  , s!"num_tokens: {summary.tokenTotal}"
+  , s!"total_time: {formatSeconds summary.encodeNanosTotal}s"
+  , s!"tokens_per_sec: {formatTokensPerSec summary.tokenTotal summary.encodeNanosTotal}"
+  ]
+
 /-- Run packaged tests over the built-in stress corpus. -/
 def runPackagedTests (paths : List System.FilePath) : IO UInt32 := do
   let mut failures : List String := []
@@ -404,6 +459,32 @@ def runEmpiricalStudy
         IO.println s!"[{path}] profile={formatProfileName tok.profile}"
         let (summary, pathFailures) ← runTokenizerStudy path tok samples
         for line in renderStudySummary summary do
+          IO.println s!"[{path}] {line}"
+        failures := failures ++ pathFailures
+  if failures.isEmpty then
+    pure 0
+  else
+    for failure in failures do
+      IO.eprintln failure
+    pure 1
+
+/-- Run a pure speed benchmark over a newline-delimited dataset file. -/
+def runSpeedBenchmark
+    (paths : List System.FilePath)
+    (datasetPath : System.FilePath) : IO UInt32 := do
+  let samples ← loadStudySamples datasetPath
+  IO.println s!"dataset: {datasetPath}"
+  IO.println s!"loaded samples: {samples.length}"
+  let mut failures : List String := []
+  for path in paths do
+    let loaded ← loadCertifiedAsciiTokenizer path
+    match loaded with
+    | .error err =>
+        failures := appendFailure failures path s!"load failed: {err}"
+    | .ok ⟨tok, _⟩ =>
+        IO.println s!"[{path}] profile={formatProfileName tok.profile}"
+        let (summary, pathFailures) ← benchmarkTokenizer path tok samples
+        for line in renderBenchmarkSummary summary do
           IO.println s!"[{path}] {line}"
         failures := failures ++ pathFailures
   if failures.isEmpty then
