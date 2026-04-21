@@ -1,0 +1,12 @@
+dataset: hf_benchmark_texts/bioasq.txt
+loaded samples: 3632
+[tokenizers/cl100k/tokenizer.json] profile=cl100k
+[tokenizers/cl100k/tokenizer.json] samples: 3632
+[tokenizers/cl100k/tokenizer.json] roundtrip passes: 3632/3632
+[tokenizers/cl100k/tokenizer.json] encode agreement: 3632/3632
+[tokenizers/cl100k/tokenizer.json] decode(Python ids) passes: 3632/3632
+[tokenizers/cl100k/tokenizer.json] Lean token total: 48072
+[tokenizers/cl100k/tokenizer.json] Python token total: 48072
+[tokenizers/cl100k/tokenizer.json] num_tokens: 48072
+[tokenizers/cl100k/tokenizer.json] total_time: 0.000056s
+[tokenizers/cl100k/tokenizer.json] tokens_per_sec: 854051557.197932

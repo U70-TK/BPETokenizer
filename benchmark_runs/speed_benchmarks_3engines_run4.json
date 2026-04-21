@@ -1,0 +1,254 @@
+[
+  {
+    "engine": "tiktoken",
+    "tokenizer": "cl100k",
+    "datasets": {
+      "swe_bench": {
+        "num_tokens": 8160343,
+        "total_time": 3.596138166,
+        "tokens_per_sec": 2269196.183047879,
+        "peak_rss_bytes": 130859008
+      },
+      "gsm8k": {
+        "num_tokens": 913466,
+        "total_time": 0.38596925,
+        "tokens_per_sec": 2366680.765371853,
+        "peak_rss_bytes": 97517568
+      },
+      "chemistryqa": {
+        "num_tokens": 79301,
+        "total_time": 0.032033167,
+        "tokens_per_sec": 2475590.377935469,
+        "peak_rss_bytes": 109953024
+      },
+      "bioasq": {
+        "num_tokens": 48072,
+        "total_time": 0.02160775,
+        "tokens_per_sec": 2224757.32086867,
+        "peak_rss_bytes": 109854720
+      },
+      "medmcqa": {
+        "num_tokens": 3128322,
+        "total_time": 1.409215,
+        "tokens_per_sec": 2219903.9891003147,
+        "peak_rss_bytes": 120406016
+      }
+    },
+    "overall": {
+      "num_tokens": 12329504,
+      "total_time": 5.4449633330000005,
+      "tokens_per_sec": 2264386.9657074143,
+      "peak_rss_bytes": 130859008
+    }
+  },
+  {
+    "engine": "tiktoken",
+    "tokenizer": "o200k",
+    "datasets": {
+      "swe_bench": {
+        "num_tokens": 8229480,
+        "total_time": 3.47225,
+        "tokens_per_sec": 2370071.2794297645,
+        "peak_rss_bytes": 359727104
+      },
+      "gsm8k": {
+        "num_tokens": 905214,
+        "total_time": 0.39735175,
+        "tokens_per_sec": 2278117.5620844755,
+        "peak_rss_bytes": 351944704
+      },
+      "chemistryqa": {
+        "num_tokens": 79010,
+        "total_time": 0.033729708,
+        "tokens_per_sec": 2342445.419331825,
+        "peak_rss_bytes": 359448576
+      },
+      "bioasq": {
+        "num_tokens": 47002,
+        "total_time": 0.024130209,
+        "tokens_per_sec": 1947848.8561785768,
+        "peak_rss_bytes": 356483072
+      },
+      "medmcqa": {
+        "num_tokens": 3054188,
+        "total_time": 1.477979875,
+        "tokens_per_sec": 2066461.1552982074,
+        "peak_rss_bytes": 356204544
+      }
+    },
+    "overall": {
+      "num_tokens": 12314894,
+      "total_time": 5.405441542,
+      "tokens_per_sec": 2278240.15934941,
+      "peak_rss_bytes": 359727104
+    }
+  },
+  {
+    "engine": "MinBPE",
+    "tokenizer": "cl100k",
+    "datasets": {
+      "swe_bench": {
+        "num_tokens": 8160343,
+        "total_time": 27.90574475,
+        "tokens_per_sec": 292425.2003702571,
+        "peak_rss_bytes": 132857856
+      },
+      "gsm8k": {
+        "num_tokens": 913466,
+        "total_time": 3.641759209,
+        "tokens_per_sec": 250830.9714004488,
+        "peak_rss_bytes": 106758144
+      },
+      "chemistryqa": {
+        "num_tokens": 79301,
+        "total_time": 0.389480167,
+        "tokens_per_sec": 203607.28663238967,
+        "peak_rss_bytes": 104153088
+      },
+      "bioasq": {
+        "num_tokens": 48072,
+        "total_time": 0.242104458,
+        "tokens_per_sec": 198558.92120747318,
+        "peak_rss_bytes": 101859328
+      },
+      "medmcqa": {
+        "num_tokens": 3128322,
+        "total_time": 18.800259125,
+        "tokens_per_sec": 166397.81288120942,
+        "peak_rss_bytes": 124829696
+      }
+    },
+    "overall": {
+      "num_tokens": 12329504,
+      "total_time": 50.979347708999995,
+      "tokens_per_sec": 241852.91797727975,
+      "peak_rss_bytes": 132857856
+    }
+  },
+  {
+    "engine": "MinBPE",
+    "tokenizer": "o200k",
+    "datasets": {
+      "swe_bench": {
+        "num_tokens": 8229480,
+        "total_time": 29.178507,
+        "tokens_per_sec": 282039.1050165795,
+        "peak_rss_bytes": 317325312
+      },
+      "gsm8k": {
+        "num_tokens": 905214,
+        "total_time": 3.662236583,
+        "tokens_per_sec": 247175.18365743442,
+        "peak_rss_bytes": 372211712
+      },
+      "chemistryqa": {
+        "num_tokens": 79010,
+        "total_time": 0.25226075,
+        "tokens_per_sec": 313207.6631025635,
+        "peak_rss_bytes": 358449152
+      },
+      "bioasq": {
+        "num_tokens": 47002,
+        "total_time": 0.262396917,
+        "tokens_per_sec": 179125.58019879478,
+        "peak_rss_bytes": 366755840
+      },
+      "medmcqa": {
+        "num_tokens": 3054188,
+        "total_time": 16.663383541,
+        "tokens_per_sec": 183287.3853311494,
+        "peak_rss_bytes": 379027456
+      }
+    },
+    "overall": {
+      "num_tokens": 12314894,
+      "total_time": 50.018784790999995,
+      "tokens_per_sec": 246205.38166724614,
+      "peak_rss_bytes": 379027456
+    }
+  },
+  {
+    "engine": "LeanBPE",
+    "tokenizer": "cl100k",
+    "datasets": {
+      "swe_bench": {
+        "num_tokens": 8160343,
+        "total_time": 154.744695,
+        "tokens_per_sec": 52734.234281827885,
+        "peak_rss_bytes": 179437568
+      },
+      "gsm8k": {
+        "num_tokens": 913466,
+        "total_time": 4.324018,
+        "tokens_per_sec": 211253.97720361018,
+        "peak_rss_bytes": 146784256
+      },
+      "chemistryqa": {
+        "num_tokens": 79301,
+        "total_time": 0.302006,
+        "tokens_per_sec": 262580.8758766382,
+        "peak_rss_bytes": 141836288
+      },
+      "bioasq": {
+        "num_tokens": 48072,
+        "total_time": 0.218812,
+        "tokens_per_sec": 219695.44631921465,
+        "peak_rss_bytes": 141770752
+      },
+      "medmcqa": {
+        "num_tokens": 3128322,
+        "total_time": 15.248178,
+        "tokens_per_sec": 205160.38047299816,
+        "peak_rss_bytes": 169246720
+      }
+    },
+    "overall": {
+      "num_tokens": 12329504,
+      "total_time": 174.83770900000002,
+      "tokens_per_sec": 70519.70693576177,
+      "peak_rss_bytes": 179437568
+    }
+  },
+  {
+    "engine": "LeanBPE",
+    "tokenizer": "o200k",
+    "datasets": {
+      "swe_bench": {
+        "num_tokens": 8229480,
+        "total_time": 160.119138,
+        "tokens_per_sec": 51395.979910908594,
+        "peak_rss_bytes": 303300608
+      },
+      "gsm8k": {
+        "num_tokens": 905214,
+        "total_time": 5.292222,
+        "tokens_per_sec": 171046.11257804377,
+        "peak_rss_bytes": 271089664
+      },
+      "chemistryqa": {
+        "num_tokens": 79010,
+        "total_time": 0.379915,
+        "tokens_per_sec": 207967.57169366832,
+        "peak_rss_bytes": 266747904
+      },
+      "bioasq": {
+        "num_tokens": 47002,
+        "total_time": 0.26766,
+        "tokens_per_sec": 175603.3774191138,
+        "peak_rss_bytes": 266846208
+      },
+      "medmcqa": {
+        "num_tokens": 3054188,
+        "total_time": 18.634499,
+        "tokens_per_sec": 163899.6572969308,
+        "peak_rss_bytes": 294518784
+      }
+    },
+    "overall": {
+      "num_tokens": 12314894,
+      "total_time": 184.69343400000002,
+      "tokens_per_sec": 66677.48675894996,
+      "peak_rss_bytes": 303300608
+    }
+  }
+]

@@ -1,0 +1,12 @@
+dataset: hf_benchmark_texts/chemistryqa.txt
+loaded samples: 2474
+[tokenizers/o200k_harmony/tokenizer.json] profile=o200k
+[tokenizers/o200k_harmony/tokenizer.json] samples: 2474
+[tokenizers/o200k_harmony/tokenizer.json] roundtrip passes: 2474/2474
+[tokenizers/o200k_harmony/tokenizer.json] encode agreement: 2474/2474
+[tokenizers/o200k_harmony/tokenizer.json] decode(Python ids) passes: 2474/2474
+[tokenizers/o200k_harmony/tokenizer.json] Lean token total: 79010
+[tokenizers/o200k_harmony/tokenizer.json] Python token total: 79010
+[tokenizers/o200k_harmony/tokenizer.json] num_tokens: 79010
+[tokenizers/o200k_harmony/tokenizer.json] total_time: 0.000039s
+[tokenizers/o200k_harmony/tokenizer.json] tokens_per_sec: 2045142753.604431

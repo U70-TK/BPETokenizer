@@ -1,0 +1,12 @@
+dataset: hf_benchmark_texts/medmcqa.txt
+loaded samples: 179234
+[tokenizers/o200k_harmony/tokenizer.json] profile=o200k
+[tokenizers/o200k_harmony/tokenizer.json] samples: 179234
+[tokenizers/o200k_harmony/tokenizer.json] roundtrip passes: 179234/179234
+[tokenizers/o200k_harmony/tokenizer.json] encode agreement: 179234/179234
+[tokenizers/o200k_harmony/tokenizer.json] decode(Python ids) passes: 179234/179234
+[tokenizers/o200k_harmony/tokenizer.json] Lean token total: 3054188
+[tokenizers/o200k_harmony/tokenizer.json] Python token total: 3054188
+[tokenizers/o200k_harmony/tokenizer.json] num_tokens: 3054188
+[tokenizers/o200k_harmony/tokenizer.json] total_time: 0.002751s
+[tokenizers/o200k_harmony/tokenizer.json] tokens_per_sec: 1110154819.625486

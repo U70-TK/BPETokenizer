@@ -25,7 +25,7 @@ def main() -> int:
         print("only ASCII test inputs are supported", file=sys.stderr)
         return 2
     enc = build_encoding(tokenizer_path)
-    rows = [enc.encode(sample) for sample in samples]
+    rows = [enc.encode(sample, disallowed_special=()) for sample in samples]
     print(json.dumps(rows))
     return 0
 

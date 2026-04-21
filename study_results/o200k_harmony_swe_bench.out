@@ -1,0 +1,12 @@
+dataset: hf_benchmark_texts/swe_bench.txt
+loaded samples: 16192
+[tokenizers/o200k_harmony/tokenizer.json] profile=o200k
+[tokenizers/o200k_harmony/tokenizer.json] samples: 16192
+[tokenizers/o200k_harmony/tokenizer.json] roundtrip passes: 16192/16192
+[tokenizers/o200k_harmony/tokenizer.json] encode agreement: 16192/16192
+[tokenizers/o200k_harmony/tokenizer.json] decode(Python ids) passes: 16192/16192
+[tokenizers/o200k_harmony/tokenizer.json] Lean token total: 8229480
+[tokenizers/o200k_harmony/tokenizer.json] Python token total: 8229480
+[tokenizers/o200k_harmony/tokenizer.json] num_tokens: 8229480
+[tokenizers/o200k_harmony/tokenizer.json] total_time: 0.000272s
+[tokenizers/o200k_harmony/tokenizer.json] tokens_per_sec: 30265455481.593174

@@ -32,6 +32,7 @@ def printUsage : IO Unit := do
   IO.println "  lean-bpe [--tokenizer <path>] roundtrip <text>"
   IO.println "  lean-bpe [--tokenizer <path>] check"
   IO.println "  lean-bpe [--tokenizer <path>] bench <newline-delimited dataset file>"
+  IO.println "  lean-bpe [--tokenizer <path>] bench-warmcold <newline-delimited dataset file>"
   IO.println "  lean-bpe [--tokenizer <path>] study <newline-delimited dataset file>"
 
 def parseCliOptions : List String → Except String (Option System.FilePath × List String)
@@ -60,6 +61,10 @@ def main (args : List String) : IO UInt32 := do
             | none => supportedTokenizerPaths
       | ["bench", datasetPath] =>
           runSpeedBenchmark
+            (match pathOpt with | some path => [path] | none => supportedTokenizerPaths)
+            datasetPath
+      | ["bench-warmcold", datasetPath] =>
+          runWarmColdSpeedBenchmark
             (match pathOpt with | some path => [path] | none => supportedTokenizerPaths)
             datasetPath
       | ["study", datasetPath] =>

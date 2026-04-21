@@ -169,6 +169,11 @@ def BenchmarkSummary.empty : BenchmarkSummary :=
     tokenTotal := 0
     encodeNanosTotal := 0 }
 
+structure WarmColdBenchmarkSummary where
+  cold : BenchmarkSummary
+  warm : BenchmarkSummary
+  deriving Repr
+
 private def appendFailure
     (failures : List String)
     (path : System.FilePath)
@@ -421,6 +426,21 @@ def renderBenchmarkSummary (summary : BenchmarkSummary) : List String :=
   , s!"tokens_per_sec: {formatTokensPerSec summary.tokenTotal summary.encodeNanosTotal}"
   ]
 
+def renderWarmColdBenchmarkSummary (summary : WarmColdBenchmarkSummary) : List String :=
+  let coldRate :=
+    formatTokensPerSec summary.cold.tokenTotal summary.cold.encodeNanosTotal
+  let warmRate :=
+    formatTokensPerSec summary.warm.tokenTotal summary.warm.encodeNanosTotal
+  [ s!"cold.samples: {summary.cold.sampleCount}"
+  , s!"cold.num_tokens: {summary.cold.tokenTotal}"
+  , s!"cold.total_time: {formatSeconds summary.cold.encodeNanosTotal}s"
+  , s!"cold.tokens_per_sec: {coldRate}"
+  , s!"warm.samples: {summary.warm.sampleCount}"
+  , s!"warm.num_tokens: {summary.warm.tokenTotal}"
+  , s!"warm.total_time: {formatSeconds summary.warm.encodeNanosTotal}s"
+  , s!"warm.tokens_per_sec: {warmRate}"
+  ]
+
 /-- Run packaged tests over the built-in stress corpus. -/
 def runPackagedTests (paths : List System.FilePath) : IO UInt32 := do
   let mut failures : List String := []
@@ -487,6 +507,35 @@ def runSpeedBenchmark
         for line in renderBenchmarkSummary summary do
           IO.println s!"[{path}] {line}"
         failures := failures ++ pathFailures
+  if failures.isEmpty then
+    pure 0
+  else
+    for failure in failures do
+      IO.eprintln failure
+    pure 1
+
+/-- Run cold/warm speed benchmark over a newline-delimited dataset file. -/
+def runWarmColdSpeedBenchmark
+    (paths : List System.FilePath)
+    (datasetPath : System.FilePath) : IO UInt32 := do
+  let samples ← loadStudySamples datasetPath
+  IO.println s!"dataset: {datasetPath}"
+  IO.println s!"loaded samples: {samples.length}"
+  let mut failures : List String := []
+  for path in paths do
+    let loaded ← loadCertifiedAsciiTokenizer path
+    match loaded with
+    | .error err =>
+        failures := appendFailure failures path s!"load failed: {err}"
+    | .ok ⟨tok, _⟩ =>
+        IO.println s!"[{path}] profile={formatProfileName tok.profile}"
+        let (coldSummary, coldFailures) ← benchmarkTokenizer path tok samples
+        let (warmSummary, warmFailures) ← benchmarkTokenizer path tok samples
+        let warmCold : WarmColdBenchmarkSummary :=
+          { cold := coldSummary, warm := warmSummary }
+        for line in renderWarmColdBenchmarkSummary warmCold do
+          IO.println s!"[{path}] {line}"
+        failures := failures ++ coldFailures ++ warmFailures
   if failures.isEmpty then
     pure 0
   else
