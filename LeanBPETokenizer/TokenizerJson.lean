@@ -9,6 +9,24 @@ open Lean
 /-- Default tokenizer path used by the CLI. -/
 def defaultTokenizerPath : System.FilePath := "tokenizers/o200k_harmony/tokenizer.json"
 
+/-- Supported tokenizer JSONs exercised by the packaged regression checks. -/
+def supportedTokenizerPaths : List System.FilePath :=
+  [ "tokenizers/cl100k/tokenizer.json"
+  , "tokenizers/o200k_harmony/tokenizer.json"
+  ]
+
+/-- Small ASCII corpus used for runtime regression checks over supported tokenizers. -/
+def regressionSamples : List String :=
+  [ "hello"
+  , "HELLO/world"
+  , "don't stop"
+  , "  tail  "
+  , "line1\nline2"
+  , "caps AND lower"
+  , "123 456 789"
+  , "punctuation!!!??"
+  ]
+
 /-- Runtime tokenizer built from the ASCII-compatible subset of a GPT byte-level BPE JSON. -/
 structure LoadedAsciiTokenizer where
   profile : PreTokenizerProfile
@@ -18,10 +36,22 @@ structure LoadedAsciiTokenizer where
   internalToExternal : Std.HashMap TokenId TokenId
 
 private def cl100kSplitRegex : String :=
-  "(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\\r\\n\\p{L}\\p{N}]?\\p{L}+|\\p{N}{1,3}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+"
+  "(?i:'s|'t|'re|'ve|'m|'ll|'d)|\
+   [^\\r\\n\\p{L}\\p{N}]?\\p{L}+|\
+   \\p{N}{1,3}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n]*|\
+   \\s*[\\r\\n]+|\
+   \\s+(?!\\S)|\
+   \\s+"
 
 private def o200kSplitRegex : String :=
-  "[^\\r\\n\\p{L}\\p{N}]?[\\p{Lu}\\p{Lt}\\p{Lm}\\p{Lo}\\p{M}]*[\\p{Ll}\\p{Lm}\\p{Lo}\\p{M}]+(?i:'s|'t|'re|'ve|'m|'ll|'d)?|[^\\r\\n\\p{L}\\p{N}]?[\\p{Lu}\\p{Lt}\\p{Lm}\\p{Lo}\\p{M}]+[\\p{Ll}\\p{Lm}\\p{Lo}\\p{M}]*(?i:'s|'t|'re|'ve|'m|'ll|'d)?|\\p{N}{1,3}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n/]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+"
+  "[^\\r\\n\\p{L}\\p{N}]?[\\p{Lu}\\p{Lt}\\p{Lm}\\p{Lo}\\p{M}]*\
+   [\\p{Ll}\\p{Lm}\\p{Lo}\\p{M}]+(?i:'s|'t|'re|'ve|'m|'ll|'d)?|\
+   [^\\r\\n\\p{L}\\p{N}]?[\\p{Lu}\\p{Lt}\\p{Lm}\\p{Lo}\\p{M}]+\
+   [\\p{Ll}\\p{Lm}\\p{Lo}\\p{M}]*(?i:'s|'t|'re|'ve|'m|'ll|'d)?|\
+   \\p{N}{1,3}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n/]*|\
+   \\s*[\\r\\n]+|\
+   \\s+(?!\\S)|\
+   \\s+"
 
 private def visibleByteNats : List Nat :=
   (List.range (126 - 33 + 1)).map (· + 33) ++
@@ -437,6 +467,14 @@ private theorem isAsciiString_eq_true_of_hascii
   intro c hc
   simpa using hascii c hc
 
+/-- Preferred theorem name for turning the combined runtime validator into the
+proof-carrying certificate used by the verified external-id API. -/
+theorem loadedAsciiTokenizerSound_of_validate
+    (tok : LoadedAsciiTokenizer)
+    (hvalid : validateLoadedAsciiTokenizer tok = true) :
+    LoadedAsciiSound tok :=
+  loadedAsciiSound_of_validate tok hvalid
+
 private theorem encodeDecodeIds_roundtrip
     (tok : LoadedAsciiTokenizer) :
     ∀ (ids : List TokenId),
@@ -495,7 +533,8 @@ theorem roundtripExternal_ok_of_sound
     (hascii : ∀ c ∈ s.toList, c.val < 128) :
     roundtripExternal tok s = .ok s := by
   unfold roundtripExternal encodeExternalIds decodeExternalIds
-  simp [isAsciiString_eq_true_of_hascii s hascii]
+  have hasciiString : isAsciiString s = true := isAsciiString_eq_true_of_hascii s hascii
+  rw [hasciiString]
   let internalIds := encodeWithProfile tok.profile tok.merges tok.vocab (fun b => b) s
   have hmapped : ∀ id ∈ internalIds, InternalIdMapped tok id := by
     intro id hid
@@ -531,6 +570,16 @@ theorem roundtripExternal_ok_of_sound
       hsound.encodeReady (by intro b; rfl) s hascii
   simpa [hround] using hdecoded
 
+/-- Preferred theorem name for the verified external-id roundtrip result on a
+validated runtime tokenizer artifact. -/
+theorem roundtripExternal_ok_of_loadedAsciiSound
+    (tok : LoadedAsciiTokenizer)
+    (hsound : LoadedAsciiSound tok)
+    (s : String)
+    (hascii : ∀ c ∈ s.toList, c.val < 128) :
+    roundtripExternal tok s = .ok s :=
+  roundtripExternal_ok_of_sound tok hsound s hascii
+
 /-- Load a tokenizer and reject it unless the runtime validator can certify the
 proof obligations needed by the external-id roundtrip theorem. -/
 def loadVerifiedAsciiTokenizer (path : System.FilePath := defaultTokenizerPath) :
@@ -543,5 +592,10 @@ def loadVerifiedAsciiTokenizer (path : System.FilePath := defaultTokenizerPath) 
           .ok ⟨tok, loadedAsciiSound_of_validate tok hvalid⟩
         else
           .error "loaded tokenizer failed validation"
+
+/-- Preferred name for the proof-carrying verified loader used by the CLI. -/
+def loadCertifiedAsciiTokenizer (path : System.FilePath := defaultTokenizerPath) :
+    IO (Except String { tok : LoadedAsciiTokenizer // LoadedAsciiSound tok }) :=
+  loadVerifiedAsciiTokenizer path
 
 end BPE

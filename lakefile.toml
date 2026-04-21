@@ -14,8 +14,17 @@ name = "mathlib"
 scope = "leanprover-community"
 rev = "v4.27.0"
 
+[[require]]
+name = "Regex"
+git = "https://github.com/pandaman64/lean-regex"
+rev = "v4.27.0"
+subDir = "regex"
+
 [[lean_lib]]
 name = "LeanBPETokenizer"
+
+[[lean_lib]]
+name = "Tests"
 
 [[lean_exe]]
 name = "lean-bpe"

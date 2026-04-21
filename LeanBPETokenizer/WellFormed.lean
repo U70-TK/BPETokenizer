@@ -32,7 +32,7 @@ These invariants are sufficient to prove the main roundtrip theorem.
 -/
 structure WellFormed
     (merges : MergeMap)
-    (vocab  : VocabMap)
+    (vocab : VocabMap)
     (byteShuffle : ByteShuffle) : Prop where
   /-- Every byte 0..255 is a base token mapped to the single-byte array `[i]`. -/
   base_tokens : ∀ i : UInt8,
@@ -165,7 +165,10 @@ The complete formal proof is deferred to a future `WellFormedProof.lean`.
 private lemma foldl_ne_inserts_preserves_getD (l : List Nat) (base : VocabMap) (k : Nat)
     (hne : ∀ j ∈ l, j ≠ k) :
     (l.foldl (fun (m : VocabMap) j =>
-        if h : j < 256 then m.insert j (ByteArray.mk #[⟨j, h⟩]) else m) base).getD k ByteArray.empty =
+        if h : j < 256 then
+          m.insert j (ByteArray.mk #[⟨j, h⟩])
+        else
+          m) base).getD k ByteArray.empty =
     base.getD k ByteArray.empty := by
   induction l generalizing base with
   | nil => simp
@@ -181,7 +184,10 @@ private lemma foldl_ne_inserts_preserves_getD (l : List Nat) (base : VocabMap) (
 /-- The range-256 base fold sets `i.toNat` to `ByteArray.mk #[i]`. -/
 private lemma base_fold_getD (i : UInt8) :
     ((List.range 256).foldl (fun (m : VocabMap) k =>
-        if h : k < 256 then m.insert k (ByteArray.mk #[⟨k, h⟩]) else m) {}).getD i.toNat ByteArray.empty =
+        if h : k < 256 then
+          m.insert k (ByteArray.mk #[⟨k, h⟩])
+        else
+          m) {}).getD i.toNat ByteArray.empty =
     ByteArray.mk #[i] := by
   have hi_mem : i.toNat ∈ List.range 256 := List.mem_range.mpr i.toNat_lt
   obtain ⟨s, t, hs⟩ := List.mem_iff_append.mp hi_mem
@@ -395,7 +401,8 @@ private lemma valid_dropPrefix
       simpa [advanceKnownIds, advanceKnownPairs] using
         ih (knownIds ++ [idx]) (knownPairs ++ [pair]) htail
 
-/-- If a pair key appears in `mergeList.map Prod.fst`, some matching entry appears in `mergeList`. -/
+/-- If a pair key appears in `mergeList.map Prod.fst`, some matching entry
+appears in `mergeList`. -/
 private lemma mem_entry_of_mem_map_fst
     (mergeList : List MergeEntry)
     {pair : TokenId × TokenId} :
@@ -458,10 +465,11 @@ private lemma buildVocabFrom_preserves_known
       vocab.getD k ByteArray.empty := by
   simpa [buildVocabFrom, vocabStep] using
     foldl_merges_preserves_getD mergeList vocab k
-      (fun entry hmem => valid_targets_avoid_known knownIds knownPairs mergeList k hvalid hk entry hmem)
+      (fun entry hmem =>
+        valid_targets_avoid_known knownIds knownPairs mergeList k hvalid hk entry hmem)
 
 /-- Any valid merge-list entry decodes to the concatenation of its component tokens. -/
-  private theorem buildVocab_entry_decomp
+private theorem buildVocab_entry_decomp
     (mergeList : List MergeEntry)
     (hvalid : ValidMergeList mergeList)
     {p0 p1 idx : TokenId}
@@ -561,7 +569,8 @@ private theorem buildMerges_mem_of_lookup
   have hpair_mem : (p0, p1) ∈ mergeList.map Prod.fst := by
     simpa using hpair_contains
   rcases mem_entry_of_mem_map_fst mergeList hpair_mem with ⟨idx', hmem'⟩
-  have hpairwise := valid_pairwise_keys (knownIds := List.range 256) (knownPairs := []) mergeList hvalid
+  have hpairwise :=
+    valid_pairwise_keys (knownIds := List.range 256) (knownPairs := []) mergeList hvalid
   have hget' : (buildMerges mergeList).getD (p0, p1) 0 = idx' := by
     simpa [buildMerges] using
       (Std.HashMap.getD_insertMany_list_of_mem (m := ({} : MergeMap))

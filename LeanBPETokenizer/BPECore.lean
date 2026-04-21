@@ -64,7 +64,7 @@ private lemma getStatsAux_contains_imp
       intro xs acc hlen hneg hpos
       match xs with
       | [] =>
-          simp [getStatsAux] at hpos
+          simp only [getStatsAux] at hpos
           exact absurd hpos hneg
       | [_] => simp at hlen
       | _ :: _ :: _ => simp at hlen
@@ -72,10 +72,10 @@ private lemma getStatsAux_contains_imp
       intro xs acc hlen hneg hpos
       match xs with
       | [] =>
-          simp [getStatsAux] at hpos
+          simp only [getStatsAux] at hpos
           exact absurd hpos hneg
       | [_] =>
-          simp [getStatsAux] at hpos
+          simp only [getStatsAux] at hpos
           exact absurd hpos hneg
       | a :: b :: rest =>
           simp only [getStatsAux] at hpos
@@ -149,19 +149,22 @@ private lemma bpeMergeAux_preserves
       intro xs acc hlen hxs hacc x hx
       match xs with
       | [] =>
-          simp [bpeMergeAux] at hx
-          exact hacc x hx
+          have hxAcc : x ∈ acc := by
+            simpa [bpeMergeAux] using hx
+          exact hacc x hxAcc
       | [_] => simp at hlen
       | _ :: _ :: _ => simp at hlen
   | succ n ih =>
       intro xs acc hlen hxs hacc x hx
       match xs with
       | [] =>
-          simp [bpeMergeAux] at hx
-          exact hacc x hx
+          have hxAcc : x ∈ acc := by
+            simpa [bpeMergeAux] using hx
+          exact hacc x hxAcc
       | [a] =>
-          simp [bpeMergeAux] at hx
-          rcases hx with hxAcc | rfl
+          have hx' : x ∈ acc ∨ x = a := by
+            simpa [bpeMergeAux, List.mem_cons] using hx
+          rcases hx' with hxAcc | rfl
           · exact hacc x hxAcc
           · exact hxs x (by simp)
       | a :: b :: rest =>
@@ -173,7 +176,7 @@ private lemma bpeMergeAux_preserves
               exact hxs id (by simp [hidRest])
             have hacc' : ∀ id ∈ idx :: acc, P id := by
               intro id hidAcc
-              simp at hidAcc
+              simp only [List.mem_cons] at hidAcc
               rcases hidAcc with rfl | hidAcc
               · exact hidx
               · exact hacc id hidAcc
@@ -184,7 +187,7 @@ private lemma bpeMergeAux_preserves
               exact hxs id (by simp [hidTail])
             have hacc' : ∀ id ∈ a :: acc, P id := by
               intro id' hidAcc
-              simp at hidAcc
+              simp only [List.mem_cons] at hidAcc
               rcases hidAcc with rfl | hidAcc
               · exact hxs id' (by simp)
               · exact hacc id' hidAcc
@@ -355,7 +358,7 @@ private lemma bpeMergeAux_length_lt
           -- One-step expansion: pair is at the head, so it fires immediately
           have hstep : bpeMergeAux pair idx (pair.1 :: pair.2 :: zs) acc =
               bpeMergeAux pair idx zs (idx :: acc) := by
-            simp [bpeMergeAux, beq_self_eq_true]
+            simp [bpeMergeAux]
           rw [hstep]
           have hbound := bpeMergeAux_length pair idx zs (idx :: acc)
           simp only [List.length_cons] at hbound ⊢; omega
@@ -401,7 +404,8 @@ private lemma bpeMergeAux_length_lt
               rw [hstep]
               split_ifs with hcond
               · -- match at head (a, b); pair in (ys'' ++ [pair.1, pair.2] ++ zs) is irrelevant
-                have hbound := bpeMergeAux_length pair idx (ys'' ++ [pair.1, pair.2] ++ zs) (idx :: acc)
+                have hbound :=
+                  bpeMergeAux_length pair idx (ys'' ++ [pair.1, pair.2] ++ zs) (idx :: acc)
                 simp only [List.length_append, List.length_cons, List.length_nil] at hbound ⊢
                 simp only [List.length_cons] at hlen; omega
               · -- no match: recurse on b :: (ys'' ++ [pair.1, pair.2] ++ zs)

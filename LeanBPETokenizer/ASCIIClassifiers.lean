@@ -172,7 +172,7 @@ theorem toLower_upper_toNat (b : UInt8) (h : isUpper b = true) :
   have hov := upper_no_overflow b h
   -- UInt8.toNat_add : (a + b).toNat = (a.toNat + b.toNat) % UInt8.size
   rw [UInt8.toNat_add]
-  simp [UInt8.size]
+  simp
   omega
 
 /-- `isUpper (b + 32) = false` when `isUpper b = true` (no wraparound). -/

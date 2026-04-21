@@ -67,10 +67,10 @@ Steps:
   `decodeBytes vocab ids = shuffledBytes`
 -/
 def encodeChunk
-    (merges      : MergeMap)
-    (vocab       : VocabMap)
+    (merges : MergeMap)
+    (_vocab : VocabMap)
     (byteShuffle : ByteShuffle)
-    (textBytes   : ByteArray) : List TokenId :=
+    (textBytes : ByteArray) : List TokenId :=
   -- Step 1: shuffle bytes
   let shuffled : ByteArray := ByteArray.mk (textBytes.data.map byteShuffle)
   -- Step 2: initialise ids = list of single-byte token ids
@@ -89,9 +89,9 @@ Decode a list of token ids back to the original raw bytes.
 2. Apply `inverseShuffle` to every byte → recovers original bytes.
 -/
 def decodeChunk
-    (vocab          : VocabMap)
+    (vocab : VocabMap)
     (inverseShuffle : ByteShuffle)
-    (ids            : List TokenId) : ByteArray :=
+    (ids : List TokenId) : ByteArray :=
   let raw := decodeBytes vocab ids
   ByteArray.mk (raw.data.map inverseShuffle)
 
@@ -108,20 +108,20 @@ Full encoding of an ASCII string to a list of token ids.
 -/
 def encodeWithProfile
     (profile : PreTokenizerProfile)
-    (merges      : MergeMap)
-    (vocab       : VocabMap)
+    (merges : MergeMap)
+    (vocab : VocabMap)
     (byteShuffle : ByteShuffle)
-    (text        : String) : List TokenId :=
+    (text : String) : List TokenId :=
   let textBytes := text.toUTF8
   let chunks    := preTokenizeASCII profile textBytes
   chunks.toList.flatMap (fun chunk => encodeChunk merges vocab byteShuffle chunk)
 
 /-- `cl100k`-style encoding retained as the default convenience wrapper. -/
 def encode
-    (merges      : MergeMap)
-    (vocab       : VocabMap)
+    (merges : MergeMap)
+    (vocab : VocabMap)
     (byteShuffle : ByteShuffle)
-    (text        : String) : List TokenId :=
+    (text : String) : List TokenId :=
   encodeWithProfile .cl100k merges vocab byteShuffle text
 
 -- ---------------------------------------------------------------------------
@@ -136,9 +136,9 @@ Full decoding of a list of token ids to an ASCII string.
 3. UTF-8 decode (identity for ASCII — Lemma 7).
 -/
 def decode
-    (vocab          : VocabMap)
+    (vocab : VocabMap)
     (inverseShuffle : ByteShuffle)
-    (ids            : List TokenId) : String :=
+    (ids : List TokenId) : String :=
   let rawBytes := decodeChunk vocab inverseShuffle ids
   String.fromUTF8! rawBytes
 
@@ -151,7 +151,7 @@ def decode
   `String.fromUTF8! (s.toUTF8) = s`.
 -/
 theorem lemma7_ascii_utf8_roundtrip (s : String)
-    (hascii : ∀ c ∈ s.toList, c.val < 128) :
+    (_hascii : ∀ c ∈ s.toList, c.val < 128) :
     String.fromUTF8! s.toUTF8 = s := by
   -- String is defined as `{ toByteArray : ByteArray, isValidUTF8 : ... }`.
   -- fromUTF8! s.toByteArray reduces to fromUTF8 s.toByteArray s.isValidUTF8 = s.
@@ -176,7 +176,9 @@ private lemma foldl_best_mem_candidates :
     (p0, p1, idx) ∈ candidates ∨ acc = some (p0, p1, idx) := by
   intro candidates
   induction candidates with
-  | nil => intro acc p0 p1 idx h; simp at h; exact Or.inr h
+  | nil =>
+      intro acc p0 p1 idx h
+      exact Or.inr h
   | cons head rest ih =>
       intro acc p0 p1 idx hfold
       simp only [List.foldl_cons] at hfold
@@ -189,14 +191,20 @@ private lemma foldl_best_mem_candidates :
             simp only [Option.some.injEq, Prod.mk.injEq] at hacc'
             obtain ⟨hp0, hp1, hidx⟩ := hacc'
             left; left
-            apply Eq.symm; apply Prod.ext; exact hp0; exact Prod.ext hp1 hidx
+            apply Eq.symm
+            apply Prod.ext
+            · exact hp0
+            · exact Prod.ext hp1 hidx
         | some best =>
             simp only at hacc'
             split_ifs at hacc' with hlt
             · simp only [Option.some.injEq, Prod.mk.injEq] at hacc'
               obtain ⟨hp0, hp1, hidx⟩ := hacc'
               left; left
-              apply Eq.symm; apply Prod.ext; exact hp0; exact Prod.ext hp1 hidx
+              apply Eq.symm
+              apply Prod.ext
+              · exact hp0
+              · exact Prod.ext hp1 hidx
             · exact Or.inr hacc'
 
 /-- If `(p0, p1, idx) ∈ stats.toList.filterMap f` where `f` looks up in `merges`,
@@ -207,8 +215,8 @@ private lemma filterMap_mem_merges
     (p0 p1 idx : TokenId)
     (h : (p0, p1, idx) ∈ stats.toList.filterMap (fun (kv : (TokenId × TokenId) × Nat) =>
            match merges.get? kv.1 with
-           | none     => none
-           | some i   => some (kv.1.1, kv.1.2, i))) :
+           | none => none
+           | some i => some (kv.1.1, kv.1.2, i))) :
     merges.get? (p0, p1) = some idx := by
   rw [List.mem_filterMap] at h
   obtain ⟨⟨pair, _⟩, _, hfun⟩ := h
@@ -228,7 +236,7 @@ private lemma filterMap_mem_merges
 
 /-- `encodeChunkLoop` preserves `decodeBytes` under `WellFormed`. -/
 private lemma encodeChunkLoop_decode_inv
-    (merges : MergeMap) (vocab : VocabMap) (byteShuffle : ByteShuffle)
+    (merges : MergeMap) (vocab : VocabMap) (_byteShuffle : ByteShuffle)
     (hw : EncodeReady merges vocab)
     (fuel : Nat) (ids : List TokenId) :
     decodeBytes vocab (encodeChunkLoop merges fuel ids) = decodeBytes vocab ids := by
@@ -247,9 +255,9 @@ private lemma encodeChunkLoop_decode_inv
         -- Case split on cands
         rcases hcands : cands with _ | ⟨head, rest⟩
         · -- cands = [] → outer match iota-reduces to ids → goal is rfl
-          simp only [hcands]
+          simp
         · -- cands = head :: rest; outer match + let best reduced by simp
-          simp only [hcands]
+          simp only [Prod.mk.eta, List.foldl_cons]
           -- Goal: decodeBytes vocab (match <foldl_expr> with | none => ids | some ⟨..⟩ => ..) = ..
           -- Case-split on the result of the foldl (the inner match scrutinee)
           split
@@ -304,8 +312,10 @@ private lemma encodeChunkLoop_preserves
             | some i => some (kv.1.1, kv.1.2, i)) with h_cands
         rcases hcands : cands with _ | ⟨head, rest⟩
         · intro id hid
-          simpa [hcands] using hids id hid
-        · simp only [hcands]
+          have hid' : id ∈ ids := by
+            simpa [hcands] using hid
+          exact hids id hid'
+        · simp only [Prod.mk.eta, List.foldl_cons]
           split
           · intro id hid
             exact hids id hid
@@ -344,7 +354,7 @@ private lemma ids0_decode_eq (vocab : VocabMap)
       simp only [ByteArray.data_append]
       -- Goal: #[b] ++ rest.toArray = (b :: rest).toArray
       apply Array.ext'
-      simp [Array.toList_append, List.toList_toArray]
+      simp [List.toList_toArray]
 
 -- ---------------------------------------------------------------------------
 -- Per-chunk roundtrip
@@ -355,24 +365,23 @@ private lemma ids0_decode_eq (vocab : VocabMap)
 `decodeChunk (encodeChunk chunk) = chunk`.
 -/
 theorem chunkRoundtrip
-    (merges      : MergeMap)
-    (vocab       : VocabMap)
+    (merges : MergeMap)
+    (vocab : VocabMap)
     (byteShuffle inverseShuffle : ByteShuffle)
-    (chunk       : ByteArray)
-    (hw          : EncodeReady merges vocab)
-    (hinv        : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b) :
+    (chunk : ByteArray)
+    (hw : EncodeReady merges vocab)
+    (hinv : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b) :
     decodeChunk vocab inverseShuffle
       (encodeChunk merges vocab byteShuffle chunk) = chunk := by
   simp only [decodeChunk, encodeChunk]
-  set shuffled := ByteArray.mk (chunk.data.map byteShuffle) with h_shuffled
-  set ids₀ := shuffled.data.toList.map (·.toNat) with h_ids₀
+  set shuffled := ByteArray.mk (chunk.data.map byteShuffle)
   -- Step 1: loop preserves decodeBytes
   rw [encodeChunkLoop_decode_inv merges vocab byteShuffle hw]
   -- Step 2: initial ids decode to shuffled
   rw [ids0_decode_eq vocab hw.base_tokens shuffled]
   -- Step 3: inverseShuffle recovers chunk
-  -- Goal: ByteArray.mk ((ByteArray.mk (chunk.data.map byteShuffle)).data.map inverseShuffle) = chunk
-  show ByteArray.mk ((chunk.data.map byteShuffle).map inverseShuffle) = chunk
+  -- Goal: ByteArray.mk ((chunk.data.map byteShuffle).map inverseShuffle) = chunk
+  change ByteArray.mk ((chunk.data.map byteShuffle).map inverseShuffle) = chunk
   rw [Array.map_map]
   exact shuffle_cancel_array byteShuffle inverseShuffle hinv chunk
 

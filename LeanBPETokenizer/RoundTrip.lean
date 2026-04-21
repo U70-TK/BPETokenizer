@@ -56,17 +56,17 @@ namespace BPE
 6. (Lemma 7) `text_bytes.decode = s`.
 -/
 theorem ascii_bpe_roundtrip_withProfile
-    (profile        : PreTokenizerProfile)
-    (merges         : MergeMap)
-    (vocab          : VocabMap)
-    (byteShuffle    : ByteShuffle)
+    (profile : PreTokenizerProfile)
+    (merges : MergeMap)
+    (vocab : VocabMap)
+    (byteShuffle : ByteShuffle)
     (inverseShuffle : ByteShuffle)
-    (hw             : WellFormed merges vocab byteShuffle)
-    (hinv           : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
-    (s              : String)
-    (hascii         : ∀ c ∈ s.toList, c.val < 128) :
+    (hw : WellFormed merges vocab byteShuffle)
+    (hinv : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
+    (s : String)
+    (hascii : ∀ c ∈ s.toList, c.val < 128) :
     decode vocab inverseShuffle (encodeWithProfile profile merges vocab byteShuffle s) = s := by
-  simp only [decode, encode, decodeChunk]
+  simp only [decode, decodeChunk]
   simp only [encodeWithProfile]
   -- List foldl with arbitrary init
   have list_foldl_acc : ∀ (l : List ByteArray) (init : ByteArray),
@@ -88,7 +88,9 @@ theorem ascii_bpe_roundtrip_withProfile
     simp [ByteArray.data_append, Array.map_append]
   -- decodeChunk over flatMap = foldl join (via chunkRoundtrip)
   have dc_flatmap : ∀ (l : List ByteArray),
-      ByteArray.mk ((decodeBytes vocab (l.flatMap (encodeChunk merges vocab byteShuffle))).data.map inverseShuffle) =
+      ByteArray.mk
+          ((decodeBytes vocab (l.flatMap (encodeChunk merges vocab byteShuffle))).data.map
+            inverseShuffle) =
       l.foldl (· ++ ·) ByteArray.empty := by
     intro l
     induction l with
@@ -98,7 +100,10 @@ theorem ascii_bpe_roundtrip_withProfile
     | cons c cs ih =>
         simp only [List.flatMap_cons]
         rw [dc_append, ih]
-        have hcr : ByteArray.mk ((decodeBytes vocab (encodeChunk merges vocab byteShuffle c)).data.map inverseShuffle) = c :=
+        have hcr :
+            ByteArray.mk
+                ((decodeBytes vocab (encodeChunk merges vocab byteShuffle c)).data.map
+                  inverseShuffle) = c :=
           chunkRoundtrip merges vocab byteShuffle inverseShuffle c hw.toEncodeReady hinv
         rw [hcr]
         simp only [List.foldl_cons, ByteArray.empty_append]
@@ -114,14 +119,14 @@ theorem ascii_bpe_roundtrip_withProfile
   exact lemma7_ascii_utf8_roundtrip s hascii
 
 theorem ascii_bpe_roundtrip
-    (merges         : MergeMap)
-    (vocab          : VocabMap)
-    (byteShuffle    : ByteShuffle)
+    (merges : MergeMap)
+    (vocab : VocabMap)
+    (byteShuffle : ByteShuffle)
     (inverseShuffle : ByteShuffle)
-    (hw             : WellFormed merges vocab byteShuffle)
-    (hinv           : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
-    (s              : String)
-    (hascii         : ∀ c ∈ s.toList, c.val < 128) :
+    (hw : WellFormed merges vocab byteShuffle)
+    (hinv : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
+    (s : String)
+    (hascii : ∀ c ∈ s.toList, c.val < 128) :
     decode vocab inverseShuffle (encode merges vocab byteShuffle s) = s :=
   ascii_bpe_roundtrip_withProfile
     .cl100k merges vocab byteShuffle inverseShuffle hw hinv s hascii
@@ -139,8 +144,9 @@ theorem ascii_bpe_roundtrip_of_encodeReady_withProfile
     (hinv : ∀ b : UInt8, inverseShuffle (byteShuffle b) = b)
     (s : String)
     (hascii : ∀ c ∈ s.toList, c.val < 128) :
-    decode vocab inverseShuffle (encodeWithProfile profile merges vocab byteShuffle s) = s := by
-  simp only [decode, encode, decodeChunk]
+    decode vocab inverseShuffle
+        (encodeWithProfile profile merges vocab byteShuffle s) = s := by
+  simp only [decode, decodeChunk]
   simp only [encodeWithProfile]
   have list_foldl_acc : ∀ (l : List ByteArray) (init : ByteArray),
       l.foldl (· ++ ·) init = init ++ l.foldl (· ++ ·) ByteArray.empty := by
@@ -159,7 +165,9 @@ theorem ascii_bpe_roundtrip_of_encodeReady_withProfile
     apply ByteArray.ext_iff.mpr
     simp [ByteArray.data_append, Array.map_append]
   have dc_flatmap : ∀ (l : List ByteArray),
-      ByteArray.mk ((decodeBytes vocab (l.flatMap (encodeChunk merges vocab byteShuffle))).data.map inverseShuffle) =
+      ByteArray.mk
+          ((decodeBytes vocab (l.flatMap (encodeChunk merges vocab byteShuffle))).data.map
+            inverseShuffle) =
       l.foldl (· ++ ·) ByteArray.empty := by
     intro l
     induction l with
@@ -169,7 +177,10 @@ theorem ascii_bpe_roundtrip_of_encodeReady_withProfile
     | cons c cs ih =>
         simp only [List.flatMap_cons]
         rw [dc_append, ih]
-        have hcr : ByteArray.mk ((decodeBytes vocab (encodeChunk merges vocab byteShuffle c)).data.map inverseShuffle) = c :=
+        have hcr :
+            ByteArray.mk
+                ((decodeBytes vocab (encodeChunk merges vocab byteShuffle c)).data.map
+                  inverseShuffle) = c :=
           chunkRoundtrip merges vocab byteShuffle inverseShuffle c hw hinv
         rw [hcr]
         simp only [List.foldl_cons, ByteArray.empty_append]
@@ -208,7 +219,12 @@ theorem ascii_bpe_roundtrip_of_valid_withProfile
     (s : String)
     (hascii : ∀ c ∈ s.toList, c.val < 128) :
     decode (buildVocab mergeList) inverseShuffle
-      (encodeWithProfile profile (buildMerges mergeList) (buildVocab mergeList) byteShuffle s) = s :=
+        (encodeWithProfile
+          profile
+          (buildMerges mergeList)
+          (buildVocab mergeList)
+          byteShuffle
+          s) = s :=
   ascii_bpe_roundtrip_of_encodeReady_withProfile
     profile
     (buildMerges mergeList) (buildVocab mergeList) byteShuffle inverseShuffle

@@ -79,7 +79,7 @@ lemma mergeAt_size (parts : Array ByteArray) (i : Nat) (h : i + 1 < parts.size) 
 
 /-- ByteArray.empty ++ x = x -/
 private lemma ba_empty_append (x : ByteArray) : ByteArray.empty ++ x = x := by
-  simp [ByteArray.ext_iff, ByteArray.data_append, ByteArray.data_empty]
+  rfl
 
 /-- foldl (· ++ ·) with arbitrary accumulator equals acc ++ foldl with empty. -/
 private lemma foldl_ba_acc (arr : Array ByteArray) (init : ByteArray) :
@@ -102,7 +102,7 @@ private lemma foldl_ba_append (xs ys : Array ByteArray) :
 private lemma foldl_ba_push (arr : Array ByteArray) (x : ByteArray) :
     (arr.push x).foldl (· ++ ·) ByteArray.empty =
     arr.foldl (· ++ ·) ByteArray.empty ++ x := by
-  simp [Array.foldl_push]
+  rw [Array.foldl_push]
 
 /-- Singleton array has size 1. -/
 private lemma singleton_size (x : ByteArray) : #[x].size = 1 := rfl
@@ -145,7 +145,7 @@ private lemma array_extract_decompose (parts : Array ByteArray) (i : Nat)
 /-- join of a singleton array is just the element. -/
 private lemma foldl_ba_singleton (x : ByteArray) :
     #[x].foldl (· ++ ·) ByteArray.empty = x := by
-  simp [Array.foldl_push, Array.foldl_empty]
+  simp
 
 /-- `mergeAt` preserves the join of all parts. -/
 lemma mergeAt_join (parts : Array ByteArray) (i : Nat) (h : i + 1 < parts.size) :
